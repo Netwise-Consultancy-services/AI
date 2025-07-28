@@ -152,14 +152,14 @@ def get_life_expectancy_color(life_exp):
     else:
         return '#FF6B6B'  # Red
 
-def simulate_improvements(row_data, feature_importances, improvement_factor=0.2):
+def simulate_improvements(row_data, feature_importances, correlation_matrix, scaled_features, model, improvement_factor=0.2):
     """Simulate life expectancy improvements"""
     try:
         # Get the row's feature values
-        if hasattr(row_data, 'name') and row_data.name in X_scaled.index:
-            row_features = X_scaled.loc[row_data.name]
+        if hasattr(row_data, 'name') and row_data.name in scaled_features.index:
+            row_features = scaled_features.loc[row_data.name]
         else:
-            row_features = X_scaled.iloc[0]
+            row_features = scaled_features.iloc[0]
         
         improved_features = row_features.copy()
         
@@ -172,8 +172,8 @@ def simulate_improvements(row_data, feature_importances, improvement_factor=0.2)
                 current_value = improved_features[feature_name]
                 
                 # Check correlation direction for improvement
-                if feature_name in corr_matrix.index:
-                    correlation = corr_matrix.loc[feature_name, 'Life Expectancy']
+                if feature_name in correlation_matrix.index:
+                    correlation = correlation_matrix.loc[feature_name, 'Life Expectancy']
                     
                     if correlation > 0:
                         improved_features[feature_name] = current_value + (improvement_factor * abs(current_value))
@@ -181,12 +181,12 @@ def simulate_improvements(row_data, feature_importances, improvement_factor=0.2)
                         improved_features[feature_name] = current_value - (improvement_factor * abs(current_value))
         
         # Predict with improved features
-        improved_prediction = rf_model.predict([improved_features])[0]
+        improved_prediction = model.predict([improved_features])[0]
         return improved_prediction
     except:
         return row_data.get('Life Expectancy', 75) + 2  # Default improvement
 
-def get_personalized_improvement_factors(row_data, all_feature_importances):
+def get_personalized_improvement_factors(row_data, all_feature_importances, df_data, correlation_matrix):
     """Get personalized top 3 improvement factors"""
     improvement_factors = []
     
@@ -195,12 +195,12 @@ def get_personalized_improvement_factors(row_data, all_feature_importances):
             importance = all_feature_importances[all_feature_importances['feature'] == feature]['importance'].iloc[0]
             current_value = row_data[feature]
             
-            if feature in corr_matrix.index:
-                correlation = corr_matrix.loc[feature, 'Life Expectancy']
+            if feature in correlation_matrix.index:
+                correlation = correlation_matrix.loc[feature, 'Life Expectancy']
                 
                 # Calculate improvement potential
-                feature_max = df_analysis[feature].max()
-                feature_min = df_analysis[feature].min()
+                feature_max = df_data[feature].max()
+                feature_min = df_data[feature].min()
                 if feature_max != feature_min:
                     normalized_value = (current_value - feature_min) / (feature_max - feature_min)
                     if correlation > 0:
@@ -224,7 +224,7 @@ def get_personalized_improvement_factors(row_data, all_feature_importances):
     improvement_factors.sort(key=lambda x: x['combined_score'], reverse=True)
     return improvement_factors[:3]
 
-def create_enhanced_map(df_analysis, lat_col, lon_col):
+def create_enhanced_map(df_analysis, lat_col, lon_col, feature_importance, corr_matrix):
     """Create the enhanced life expectancy map"""
     # Create base map
     center_lat = df_analysis[lat_col].mean()
@@ -258,7 +258,7 @@ def create_enhanced_map(df_analysis, lat_col, lon_col):
             community_name = str(row.get(name_columns[0], 'Unknown'))
         
         # Get personalized factors
-        personalized_factors = get_personalized_improvement_factors(row, feature_importance)
+        personalized_factors = get_personalized_improvement_factors(row, feature_importance, df_analysis, corr_matrix)
         
         # Create popup
         popup_html = f"""
@@ -350,7 +350,7 @@ def main():
     
     # Calculate improvement potential
     df_analysis['Improved_Life_Exp'] = df_analysis.apply(
-        lambda row: simulate_improvements(row, feature_importance), axis=1
+        lambda row: simulate_improvements(row, feature_importance, corr_matrix, X_scaled, rf_model), axis=1
     )
     df_analysis['Improvement_Potential'] = (df_analysis['Improved_Life_Exp'] - df_analysis['Life Expectancy']).clip(0, 10)
     
@@ -370,7 +370,7 @@ def main():
         
         # Create and display map
         with st.spinner("Generating interactive map..."):
-            map_obj = create_enhanced_map(df_analysis, lat_col, lon_col)
+            map_obj = create_enhanced_map(df_analysis, lat_col, lon_col, feature_importance, corr_matrix)
             
         # Display map using streamlit-folium
         st_folium(map_obj, width=1200, height=600)
