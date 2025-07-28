@@ -30,20 +30,19 @@ st.markdown("""
     font-size: 3rem;
     color: #667eea;
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     font-weight: bold;
 }
 .sub-header {
     font-size: 1.5rem;
     color: #764ba2;
     text-align: center;
-    margin-bottom: 3rem;
+    margin-bottom: 1rem;
 }
 .metric-card {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 1rem;
     border-radius: 10px;
-    color: white;
     text-align: center;
     margin: 0.5rem 0;
 }
