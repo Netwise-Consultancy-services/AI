@@ -30,19 +30,20 @@ st.markdown("""
     font-size: 3rem;
     color: #667eea;
     text-align: center;
-    margin-bottom: 1rem;
+    margin-bottom: 2rem;
     font-weight: bold;
 }
 .sub-header {
     font-size: 1.5rem;
     color: #764ba2;
     text-align: center;
-    margin-bottom: 1rem;
+    margin-bottom: 3rem;
 }
 .metric-card {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 1rem;
     border-radius: 10px;
+    color: white;
     text-align: center;
     margin: 0.5rem 0;
 }
@@ -354,6 +355,18 @@ def main():
     df_analysis['Improvement_Potential'] = (df_analysis['Improved_Life_Exp'] - df_analysis['Life Expectancy']).clip(0, 10)
     
     # Sidebar
+    with st.sidebar:
+        # Add Innova Solutions logo with reduced top margin
+        st.markdown(
+            """
+            <div style="display: flex; justify-content: center; margin-top: -10px; margin-bottom: 15px;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Innova%E2%84%A2.jpg" 
+                     alt="Innova Solutions Logo" 
+                     style="width: 180px; height: auto; border-radius: 8px;">
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
     st.sidebar.header("📊 Analysis Overview")
     st.sidebar.metric("Total Areas", len(df_analysis))
     st.sidebar.metric("Average Life Expectancy", f"{df_analysis['Life Expectancy'].mean():.1f} years")
@@ -361,7 +374,7 @@ def main():
     st.sidebar.metric("Prediction Error (RMSE)", f"{rmse:.2f} years")
     
     # Main content tabs
-    tab1, tab2= st.tabs(["🗺️ Interactive Map", "📈 Key Insights"])
+    tab1, tab2, tab3 = st.tabs(["🗺️ Interactive Map", "📈 Key Insights", "🎯 Recommendations"])
     
     with tab1:
         st.markdown("### Enhanced Life Expectancy Map")
@@ -462,7 +475,34 @@ def main():
                 f"{df_analysis['Improvement_Potential'].max():.1f} years"
             )
     
-   
+    with tab3:
+        st.markdown("### Strategic Recommendations")
+        
+        # Priority areas
+        st.markdown("#### Areas Requiring Immediate Attention")
+        priority_areas = df_analysis.nsmallest(5, 'Life Expectancy')[['GEOID', 'Life Expectancy', 'Improvement_Potential']]
+        
+        for _, area in priority_areas.iterrows():
+            st.markdown(f"""
+            <div class="insight-box">
+                <strong>GEOID {area['GEOID']}</strong><br>
+                Current Life Expectancy: <strong>{area['Life Expectancy']:.1f} years</strong><br>
+                Improvement Potential: <strong>+{area['Improvement_Potential']:.1f} years</strong>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # High potential areas
+        st.markdown("#### Areas with Highest Improvement Potential")
+        potential_areas = df_analysis.nlargest(5, 'Improvement_Potential')[['GEOID', 'Life Expectancy', 'Improvement_Potential']]
+        
+        for _, area in potential_areas.iterrows():
+            st.markdown(f"""
+            <div class="insight-box">
+                <strong>GEOID {area['GEOID']}</strong><br>
+                Current Life Expectancy: <strong>{area['Life Expectancy']:.1f} years</strong><br>
+                Improvement Potential: <strong>+{area['Improvement_Potential']:.1f} years</strong>
+            </div>
+            """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
