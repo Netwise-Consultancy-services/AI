@@ -361,7 +361,7 @@ def main():
     st.sidebar.metric("Prediction Error (RMSE)", f"{rmse:.2f} years")
     
     # Main content tabs
-    tab1, tab2, tab3 = st.tabs(["🗺️ Interactive Map", "📈 Key Insights", "🎯 Recommendations"])
+    tab1, tab2= st.tabs(["🗺️ Interactive Map", "📈 Key Insights"])
     
     with tab1:
         st.markdown("### Enhanced Life Expectancy Map")
@@ -462,34 +462,7 @@ def main():
                 f"{df_analysis['Improvement_Potential'].max():.1f} years"
             )
     
-    with tab3:
-        st.markdown("### Strategic Recommendations")
-        
-        # Priority areas
-        st.markdown("#### Areas Requiring Immediate Attention")
-        priority_areas = df_analysis.nsmallest(5, 'Life Expectancy')[['GEOID', 'Life Expectancy', 'Improvement_Potential']]
-        
-        for _, area in priority_areas.iterrows():
-            st.markdown(f"""
-            <div class="insight-box">
-                <strong>GEOID {area['GEOID']}</strong><br>
-                Current Life Expectancy: <strong>{area['Life Expectancy']:.1f} years</strong><br>
-                Improvement Potential: <strong>+{area['Improvement_Potential']:.1f} years</strong>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # High potential areas
-        st.markdown("#### Areas with Highest Improvement Potential")
-        potential_areas = df_analysis.nlargest(5, 'Improvement_Potential')[['GEOID', 'Life Expectancy', 'Improvement_Potential']]
-        
-        for _, area in potential_areas.iterrows():
-            st.markdown(f"""
-            <div class="insight-box">
-                <strong>GEOID {area['GEOID']}</strong><br>
-                Current Life Expectancy: <strong>{area['Life Expectancy']:.1f} years</strong><br>
-                Improvement Potential: <strong>+{area['Improvement_Potential']:.1f} years</strong>
-            </div>
-            """, unsafe_allow_html=True)
+   
 
 if __name__ == "__main__":
     main()
