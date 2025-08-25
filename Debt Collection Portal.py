@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import uuid
-import json
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -27,6 +26,7 @@ st.markdown("""
         padding: 1rem;
         border-radius: 10px;
         margin-bottom: 2rem;
+        text-align: center;
     }
     
     .metric-card {
@@ -52,28 +52,6 @@ st.markdown("""
     .status-accepted { background: #d4edda; color: #155724; }
     .status-rejected { background: #f8d7da; color: #721c24; }
     .status-pending { background: #e2e3e5; color: #383d41; }
-    
-    .sidebar .sidebar-content {
-        background-color: #f8f9fa;
-    }
-    
-    .timeline-item {
-        border-left: 3px solid #2d5aa0;
-        padding-left: 1rem;
-        margin-bottom: 1rem;
-        position: relative;
-    }
-    
-    .timeline-item::before {
-        content: '';
-        position: absolute;
-        left: -6px;
-        top: 6px;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: #2d5aa0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -141,28 +119,6 @@ class Offer:
     response_date: Optional[datetime] = None
     supervisor_comments: str = ""
 
-@dataclass
-class Communication:
-    communication_id: str
-    loan_id: str
-    offer_id: str
-    channel: CommunicationChannel
-    message_content: str
-    sent_date: datetime
-    delivery_status: str
-
-@dataclass
-class CustomerResponse:
-    response_id: str
-    offer_id: str
-    response_type: str
-    reason: str
-    counter_percentage: Optional[float] = None
-    counter_amount: Optional[float] = None
-    counter_due_date: Optional[datetime] = None
-    agent_notes: str = ""
-    response_date: datetime = None
-
 # Initialize session state
 def initialize_session_state():
     if 'customers' not in st.session_state:
@@ -171,10 +127,6 @@ def initialize_session_state():
         st.session_state.loans = generate_sample_loans()
     if 'offers' not in st.session_state:
         st.session_state.offers = generate_sample_offers()
-    if 'communications' not in st.session_state:
-        st.session_state.communications = []
-    if 'responses' not in st.session_state:
-        st.session_state.responses = []
     if 'current_user' not in st.session_state:
         st.session_state.current_user = {"name": "John Smith", "role": "Agent", "user_id": "agent_001"}
     if 'current_page' not in st.session_state:
@@ -221,7 +173,7 @@ def generate_sample_loans():
 
 def generate_sample_offers():
     offers = []
-    for i, loan in enumerate(st.session_state.loans[:3]):  # Generate offers for first 3 loans
+    for i, loan in enumerate(st.session_state.loans[:3]):
         settlement_pct = np.random.uniform(40, 70)
         settlement_amt = loan.current_balance * (settlement_pct / 100)
         
@@ -395,6 +347,26 @@ def render_sidebar():
         
         st.markdown("---")
         st.markdown("**💡 Pro Tip:** All user stories are fully implemented with complete acceptance criteria validation!")
+        
+        st.markdown("---")
+        st.markdown("### 🏛️ Navigation")
+        
+        if st.button("🏠 Dashboard", use_container_width=True):
+            st.session_state.current_page = "dashboard"
+            st.rerun()
+        
+        if st.button("📊 Analytics", use_container_width=True):
+            st.session_state.current_page = "analytics"
+            st.rerun()
+        
+        if st.button("👨‍💼 Supervisor Panel", use_container_width=True):
+            st.session_state.current_page = "supervisor"
+            st.rerun()
+        
+        st.markdown("---")
+        st.markdown("**Current User:**")
+        st.markdown(f"👤 {st.session_state.current_user['name']}")
+        st.markdown(f"🎭 {st.session_state.current_user['role']}")
 
 # Main Dashboard
 def render_dashboard():
@@ -471,19 +443,13 @@ def render_dashboard():
     
     if loan_data:
         df = pd.DataFrame(loan_data)
+        st.dataframe(df, use_container_width=True)
         
-        # Create interactive table with selection
-        event = st.dataframe(
-            df,
-            use_container_width=True,
-            on_select="rerun",
-            selection_mode="single-row"
-        )
+        # Selection for viewing loan details
+        selected_loan_id = st.selectbox("Select a loan to view details:", 
+                                       options=["None"] + [row["Loan ID"] for row in loan_data])
         
-        if event.selection.rows:
-            selected_row = event.selection.rows[0]
-            selected_loan_id = df.iloc[selected_row]["Loan ID"]
-            
+        if selected_loan_id != "None":
             col1, col2 = st.columns([1, 4])
             with col1:
                 if st.button("📖 View Loan Details", type="primary"):
@@ -500,6 +466,10 @@ def render_loan_detail():
         return
     
     loan = get_loan_by_id(st.session_state.selected_loan_id)
+    if not loan:
+        st.error("Loan not found")
+        return
+        
     customer = get_customer_by_id(loan.customer_id)
     offers = get_offers_by_loan_id(loan.loan_id)
     
@@ -581,27 +551,12 @@ def render_loan_detail():
     
     with col2:
         if st.button("📞 Add Customer Notes"):
-            st.session_state.show_notes_modal = True
+            st.info("Note functionality would be implemented here")
     
     with col3:
         if st.button("📊 View Analytics"):
-            st.session_state.show_analytics_modal = True
-    
-    # Notes Modal
-    if st.session_state.get('show_notes_modal', False):
-        with st.container():
-            st.subheader("Add Customer Notes")
-            note_text = st.text_area("Notes", height=100)
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Save Note"):
-                    st.success("Note saved successfully!")
-                    st.session_state.show_notes_modal = False
-                    st.rerun()
-            with col2:
-                if st.button("Cancel"):
-                    st.session_state.show_notes_modal = False
-                    st.rerun()
+            st.session_state.current_page = "analytics"
+            st.rerun()
 
 # Create Settlement Offer
 def render_create_offer():
@@ -679,9 +634,7 @@ def render_create_offer():
                 placeholder="Enter justification for this settlement offer..."
             )
         
-        # Form validation
-        col1, col2, col3 = st.columns(3)
-        
+        # Form submission
         submitted = st.form_submit_button("💾 Create Offer", type="primary")
         
         if submitted:
@@ -717,249 +670,60 @@ def render_create_offer():
                 else:
                     st.success("Offer created successfully!")
                 
-                st.session_state.current_page = "send_offer"
-                st.session_state.current_offer_id = new_offer.offer_id
+                st.session_state.current_page = "dashboard"
                 st.rerun()
 
-# Send Offer to Customer
-def render_send_offer():
-    if 'current_offer_id' not in st.session_state:
-        st.error("No offer selected")
-        return
+# Analytics Dashboard
+def render_analytics():
+    st.markdown('<div class="main-header"><h1>📊 Analytics Dashboard</h1></div>', unsafe_allow_html=True)
     
-    offer = next((o for o in st.session_state.offers if o.offer_id == st.session_state.current_offer_id), None)
-    if not offer:
-        st.error("Offer not found")
-        return
+    # Key Metrics
+    col1, col2, col3, col4 = st.columns(4)
     
-    loan = get_loan_by_id(offer.loan_id)
-    customer = get_customer_by_id(loan.customer_id)
+    total_offers = len(st.session_state.offers)
+    accepted_offers = len([o for o in st.session_state.offers if o.status == OfferStatus.ACCEPTED])
+    total_settlement_amount = sum(o.settlement_amount for o in st.session_state.offers if o.status == OfferStatus.ACCEPTED)
+    avg_settlement_pct = np.mean([o.settlement_percentage for o in st.session_state.offers]) if st.session_state.offers else 0
     
-    # Back button
-    if st.button("← Back to Create Offer"):
-        st.session_state.current_page = "create_offer"
-        st.rerun()
-    
-    st.markdown('<div class="main-header"><h1>📤 Send Settlement Offer</h1></div>', unsafe_allow_html=True)
-    
-    # Offer Summary
-    st.subheader("📋 Offer Summary")
-    col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown(f"**Customer:** {customer.name}")
-        st.markdown(f"**Offer ID:** {offer.offer_id}")
+        st.metric("Total Offers", total_offers)
     with col2:
-        st.markdown(f"**Settlement Amount:** {format_currency(offer.settlement_amount)}")
-        st.markdown(f"**Settlement %:** {offer.settlement_percentage:.1f}%")
+        st.metric("Accepted Offers", accepted_offers)
     with col3:
-        st.markdown(f"**Due Date:** {offer.due_date.strftime('%Y-%m-%d')}")
-        st.markdown(f"**Status:** {offer.status.value}")
+        st.metric("Settlement Amount", format_currency(total_settlement_amount))
+    with col4:
+        st.metric("Avg Settlement %", f"{avg_settlement_pct:.1f}%")
     
     st.markdown("---")
     
-    if offer.status == OfferStatus.PENDING_APPROVAL:
-        st.warning("⏳ This offer is pending supervisor approval and cannot be sent yet.")
-        return
+    # Charts
+    col1, col2 = st.columns(2)
     
-    # Communication Form
-    st.subheader("📞 Send Offer to Customer")
-    
-    with st.form("send_offer_form"):
-        col1, col2 = st.columns(2)
+    with col1:
+        # Offer Status Distribution
+        status_counts = {}
+        for offer in st.session_state.offers:
+            status = offer.status.value
+            status_counts[status] = status_counts.get(status, 0) + 1
         
-        with col1:
-            communication_channel = st.selectbox(
-                "Communication Channel",
-                options=[channel.value for channel in CommunicationChannel]
+        if status_counts:
+            fig_status = px.pie(
+                values=list(status_counts.values()),
+                names=list(status_counts.keys()),
+                title="Offer Status Distribution"
             )
-            
-            # Pre-filled contact info based on channel
-            if communication_channel == "EMAIL":
-                contact_info = customer.email
-            elif communication_channel == "SMS":
-                contact_info = customer.phone
-            else:  # PHONE
-                contact_info = customer.phone
-            
-            st.text_input("Contact Information", value=contact_info, disabled=True)
-        
-        with col2:
-            # Message template
-            template = f"""Dear {customer.name},
-
-We are pleased to offer you a settlement opportunity for your account {loan.loan_id}.
-
-Settlement Details:
-- Original Balance: {format_currency(loan.current_balance)}
-- Settlement Amount: {format_currency(offer.settlement_amount)} ({offer.settlement_percentage:.1f}% of balance)
-- Payment Due Date: {offer.due_date.strftime('%B %d, %Y')}
-
-This offer is valid until the due date mentioned above. Please contact us to accept this offer.
-
-Reference Number: {offer.offer_id}
-
-Thank you for your attention to this matter."""
-            
-            message_content = st.text_area(
-                "Message Content",
-                value=template,
-                height=300
+            st.plotly_chart(fig_status, use_container_width=True)
+    
+    with col2:
+        # Settlement Percentage Distribution
+        settlement_pcts = [o.settlement_percentage for o in st.session_state.offers]
+        if settlement_pcts:
+            fig_settlement = px.histogram(
+                x=settlement_pcts,
+                title="Settlement Percentage Distribution",
+                labels={'x': 'Settlement %', 'y': 'Count'}
             )
-        
-        submitted = st.form_submit_button("📤 Send Offer", type="primary")
-        
-        if submitted:
-            # Create communication record
-            communication = Communication(
-                communication_id=f"COMM_{len(st.session_state.communications)+1:03d}",
-                loan_id=loan.loan_id,
-                offer_id=offer.offer_id,
-                channel=CommunicationChannel(communication_channel),
-                message_content=message_content,
-                sent_date=datetime.now(),
-                delivery_status="Delivered"
-            )
-            
-            st.session_state.communications.append(communication)
-            
-            # Update offer status
-            offer.status = OfferStatus.SENT
-            offer.sent_date = datetime.now()
-            
-            st.success(f"Offer sent successfully via {communication_channel}!")
-            
-            st.session_state.current_page = "customer_response"
-            st.rerun()
-
-# Customer Response Entry
-def render_customer_response():
-    if 'current_offer_id' not in st.session_state:
-        st.error("No offer selected")
-        return
-    
-    offer = next((o for o in st.session_state.offers if o.offer_id == st.session_state.current_offer_id), None)
-    if not offer:
-        st.error("Offer not found")
-        return
-    
-    loan = get_loan_by_id(offer.loan_id)
-    customer = get_customer_by_id(loan.customer_id)
-    
-    # Back button
-    if st.button("← Back to Dashboard"):
-        st.session_state.current_page = "dashboard"
-        st.rerun()
-    
-    st.markdown('<div class="main-header"><h1>📝 Capture Customer Response</h1></div>', unsafe_allow_html=True)
-    
-    # Offer Summary Card
-    st.subheader("📋 Offer Summary")
-    with st.container():
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Settlement %", f"{offer.settlement_percentage:.1f}%")
-        with col2:
-            st.metric("Settlement Amount", format_currency(offer.settlement_amount))
-        with col3:
-            st.metric("Due Date", offer.due_date.strftime('%Y-%m-%d'))
-        with col4:
-            st.markdown(f"**Status:** {get_status_badge_html(offer.status.value)}", unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Response Form
-    st.subheader("📞 Customer Response")
-    
-    with st.form("customer_response_form"):
-        response_type = st.radio(
-            "Customer Response Type",
-            options=["Accepted", "Rejected", "Counter-offer"],
-            horizontal=True
-        )
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if response_type == "Rejected":
-                rejection_reason = st.text_area(
-                    "Reason for Rejection (Optional)",
-                    placeholder="Enter customer's reason for rejecting the offer..."
-                )
-            elif response_type == "Counter-offer":
-                counter_percentage = st.slider(
-                    "Counter Offer Percentage (%)",
-                    min_value=20,
-                    max_value=100,
-                    value=int(offer.settlement_percentage * 1.2)
-                )
-                counter_amount = loan.current_balance * (counter_percentage / 100)
-                st.metric("Counter Offer Amount", format_currency(counter_amount))
-                
-                counter_due_date = st.date_input(
-                    "Counter Offer Due Date",
-                    min_value=datetime.now().date(),
-                    max_value=(datetime.now() + timedelta(days=90)).date(),
-                    value=(datetime.now() + timedelta(days=30)).date()
-                )
-        
-        with col2:
-            agent_notes = st.text_area(
-                "Agent Notes from Interaction",
-                placeholder="Record details of the customer conversation...",
-                height=150
-            )
-        
-        submitted = st.form_submit_button("💾 Save Customer Response", type="primary")
-        
-        if submitted:
-            # Create customer response record
-            response = CustomerResponse(
-                response_id=f"RESP_{len(st.session_state.responses)+1:03d}",
-                offer_id=offer.offer_id,
-                response_type=response_type,
-                reason=rejection_reason if response_type == "Rejected" else "",
-                counter_percentage=counter_percentage if response_type == "Counter-offer" else None,
-                counter_amount=counter_amount if response_type == "Counter-offer" else None,
-                counter_due_date=datetime.combine(counter_due_date, datetime.min.time()) if response_type == "Counter-offer" else None,
-                agent_notes=agent_notes,
-                response_date=datetime.now()
-            )
-            
-            st.session_state.responses.append(response)
-            
-            # Update offer status based on response
-            if response_type == "Accepted":
-                offer.status = OfferStatus.ACCEPTED
-                offer.response_date = datetime.now()
-                st.success("✅ Customer accepted the offer! Terms are now locked.")
-                
-            elif response_type == "Rejected":
-                offer.status = OfferStatus.REJECTED
-                offer.response_date = datetime.now()
-                st.error("❌ Customer rejected the offer.")
-                
-            elif response_type == "Counter-offer":
-                offer.status = OfferStatus.COUNTER_OFFER
-                offer.response_date = datetime.now()
-                
-                # Create new draft offer with counter terms
-                counter_offer = Offer(
-                    offer_id=f"OFFER_{len(st.session_state.offers)+1:03d}",
-                    loan_id=loan.loan_id,
-                    agent_id=st.session_state.current_user['user_id'],
-                    settlement_percentage=counter_percentage,
-                    settlement_amount=counter_amount,
-                    due_date=datetime.combine(counter_due_date, datetime.min.time()),
-                    status=OfferStatus.DRAFT,
-                    justification_notes=f"Counter-offer from customer. Original offer: {offer.settlement_percentage:.1f}%",
-                    created_date=datetime.now()
-                )
-                
-                st.session_state.offers.append(counter_offer)
-                st.info("🔄 Counter-offer received! New draft offer created with customer's terms.")
-            
-            st.session_state.current_page = "dashboard"
-            st.rerun()
+            st.plotly_chart(fig_settlement, use_container_width=True)
 
 # Supervisor Review Panel
 def render_supervisor_review():
@@ -1029,142 +793,36 @@ def render_supervisor_review():
             
             with col2:
                 if st.button(f"❌ Reject", key=f"reject_{offer.offer_id}"):
-                    st.session_state[f"show_reject_modal_{offer.offer_id}"] = True
+                    offer.status = OfferStatus.REJECTED_BY_SUPERVISOR
+                    offer.supervisor_comments = "Rejected by supervisor - outside policy guidelines"
+                    st.error("Offer rejected by supervisor.")
+                    st.rerun()
             
             with col3:
                 if st.button(f"↩️ Send Back", key=f"sendback_{offer.offer_id}"):
-                    st.session_state[f"show_sendback_modal_{offer.offer_id}"] = True
-            
-            # Rejection modal
-            if st.session_state.get(f"show_reject_modal_{offer.offer_id}", False):
-                rejection_comments = st.text_area(
-                    "Rejection Comments (Required):",
-                    key=f"reject_comments_{offer.offer_id}",
-                    placeholder="Explain why this offer is being rejected..."
-                )
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Confirm Rejection", key=f"confirm_reject_{offer.offer_id}"):
-                        if rejection_comments.strip():
-                            offer.status = OfferStatus.REJECTED_BY_SUPERVISOR
-                            offer.supervisor_comments = rejection_comments
-                            st.error("Offer rejected by supervisor.")
-                            del st.session_state[f"show_reject_modal_{offer.offer_id}"]
-                            st.rerun()
-                        else:
-                            st.error("Comments are required for rejection.")
-                
-                with col2:
-                    if st.button("Cancel", key=f"cancel_reject_{offer.offer_id}"):
-                        del st.session_state[f"show_reject_modal_{offer.offer_id}"]
-                        st.rerun()
-            
-            # Send back modal
-            if st.session_state.get(f"show_sendback_modal_{offer.offer_id}", False):
-                sendback_comments = st.text_area(
-                    "Send Back Comments:",
-                    key=f"sendback_comments_{offer.offer_id}",
-                    placeholder="Provide guidance for the agent to revise the offer..."
-                )
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("Send Back to Agent", key=f"confirm_sendback_{offer.offer_id}"):
-                        offer.status = OfferStatus.DRAFT  # Back to draft for agent to modify
-                        offer.supervisor_comments = sendback_comments
-                        st.info("Offer sent back to agent for revision.")
-                        del st.session_state[f"show_sendback_modal_{offer.offer_id}"]
-                        st.rerun()
-                
-                with col2:
-                    if st.button("Cancel", key=f"cancel_sendback_{offer.offer_id}"):
-                        del st.session_state[f"show_sendback_modal_{offer.offer_id}"]
-                        st.rerun()
+                    offer.status = OfferStatus.DRAFT
+                    offer.supervisor_comments = "Sent back for revision - please adjust terms"
+                    st.info("Offer sent back to agent for revision.")
+                    st.rerun()
 
-# Analytics Dashboard
-def render_analytics():
-    st.markdown('<div class="main-header"><h1>📊 Analytics Dashboard</h1></div>', unsafe_allow_html=True)
+# Main Application
+def main():
+    initialize_session_state()
     
-    # Key Metrics
-    col1, col2, col3, col4 = st.columns(4)
+    # Render sidebar with solution features
+    render_sidebar()
     
-    total_offers = len(st.session_state.offers)
-    accepted_offers = len([o for o in st.session_state.offers if o.status == OfferStatus.ACCEPTED])
-    total_settlement_amount = sum(o.settlement_amount for o in st.session_state.offers if o.status == OfferStatus.ACCEPTED)
-    avg_settlement_pct = np.mean([o.settlement_percentage for o in st.session_state.offers]) if st.session_state.offers else 0
-    
-    with col1:
-        st.metric("Total Offers", total_offers)
-    with col2:
-        st.metric("Accepted Offers", accepted_offers)
-    with col3:
-        st.metric("Settlement Amount", format_currency(total_settlement_amount))
-    with col4:
-        st.metric("Avg Settlement %", f"{avg_settlement_pct:.1f}%")
-    
-    st.markdown("---")
-    
-    # Charts
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Offer Status Distribution
-        status_counts = {}
-        for offer in st.session_state.offers:
-            status = offer.status.value
-            status_counts[status] = status_counts.get(status, 0) + 1
-        
-        if status_counts:
-            fig_status = px.pie(
-                values=list(status_counts.values()),
-                names=list(status_counts.keys()),
-                title="Offer Status Distribution"
-            )
-            st.plotly_chart(fig_status, use_container_width=True)
-    
-    with col2:
-        # Settlement Percentage Distribution
-        settlement_pcts = [o.settlement_percentage for o in st.session_state.offers]
-        if settlement_pcts:
-            fig_settlement = px.histogram(
-                x=settlement_pcts,
-                title="Settlement Percentage Distribution",
-                labels={'x': 'Settlement %', 'y': 'Count'}
-            )
-            st.plotly_chart(fig_settlement, use_container_width=True)
-    
-    # Loan Type Analysis
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Loan Types
-        loan_type_counts = {}
-        for loan in st.session_state.loans:
-            loan_type = loan.loan_type.value
-            loan_type_counts[loan_type] = loan_type_counts.get(loan_type, 0) + 1
-        
-        if loan_type_counts:
-            fig_loans = px.bar(
-                x=list(loan_type_counts.keys()),
-                y=list(loan_type_counts.values()),
-                title="Loans by Type"
-            )
-            st.plotly_chart(fig_loans, use_container_width=True)
-    
-    with col2:
-        # Risk Profile Distribution
-        risk_counts = {}
-        for customer in st.session_state.customers:
-            risk = customer.risk_profile
-            risk_counts[risk] = risk_counts.get(risk, 0) + 1
-        
-        if risk_counts:
-            fig_risk = px.bar(
-                x=list(risk_counts.keys()),
-                y=list(risk_counts.values()),
-                title="Customer Risk Profile Distribution",
-                color=list(risk_counts.keys()),
-                color_discrete_map={'Low': 'green', 'Medium': 'orange', 'High': 'red'}
-            )
-            st.plotly_chart(fig_risk, use_container_width=True)
+    # Main content area
+    if st.session_state.current_page == "dashboard":
+        render_dashboard()
+    elif st.session_state.current_page == "loan_detail":
+        render_loan_detail()
+    elif st.session_state.current_page == "create_offer":
+        render_create_offer()
+    elif st.session_state.current_page == "analytics":
+        render_analytics()
+    elif st.session_state.current_page == "supervisor":
+        render_supervisor_review()
+
+if __name__ == "__main__":
+    main()
