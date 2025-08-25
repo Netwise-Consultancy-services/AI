@@ -12,5 +12,3 @@ plotly
 streamlit-folium
 branca
 typing
-dataclasses
-enum
