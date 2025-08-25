@@ -11,3 +11,8 @@ scikit-learn
 plotly
 streamlit-folium
 branca
+uuid
+json
+typing
+dataclasses
+enum
