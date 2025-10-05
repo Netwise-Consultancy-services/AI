@@ -356,7 +356,6 @@ def main():
     
     # Sidebar
     with st.sidebar:
-       
     st.sidebar.header("📊 Analysis Overview")
     st.sidebar.metric("Total Areas", len(df_analysis))
     st.sidebar.metric("Average Life Expectancy", f"{df_analysis['Life Expectancy'].mean():.1f} years")
