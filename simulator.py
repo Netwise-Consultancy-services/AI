@@ -539,17 +539,7 @@ def main():
     
     # Sidebar for model info
     with st.sidebar:
-        # Add Innova Solutions logo with reduced top margin
-        st.markdown(
-            """
-            <div style="display: flex; justify-content: center; margin-top: -10px; margin-bottom: 15px;">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Innova%E2%84%A2.jpg" 
-                     alt="Innova Solutions Logo" 
-                     style="width: 180px; height: auto; border-radius: 8px;">
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+        
         
         st.header("📊 Model Performance")
         st.metric("R² Score", f"{r2_score:.3f}")
